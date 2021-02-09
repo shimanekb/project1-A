@@ -50,7 +50,7 @@ func ReadCsvCommands(file_path string) {
 			log.Infoln("First line detected, skipping.")
 			continue
 		}
-		command := Command{record[0], record[1], record[2]}
+		command := Command{record[0], record[1], record[3]}
 		cmd_err := ProcessCommand(command, kvStore)
 		if cmd_err != nil {
 			log.Errorln(cmd_err)
@@ -67,8 +67,7 @@ func ProcessCommand(command Command, storage kvstore.Store) error {
 	case PUT_COMMAND == command.Type:
 		log.Infof("Put command given for key: %s, value: %s", command.Key,
 			command.Value)
-		storage.Put(command.Key, command.Value)
-		return nil
+		return storage.Put(command.Key, command.Value)
 	case DEL_COMMAND == command.Type:
 		log.Infof("Del command given for key: %s, value: %s", command.Key,
 			command.Value)
