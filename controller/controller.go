@@ -63,7 +63,13 @@ func ProcessCommand(command Command, storage kvstore.Store) error {
 	case GET_COMMAND == command.Type:
 		log.Infof("Get command given for key: %s, value: %s", command.Key,
 			command.Value)
-		return nil
+		value, err := storage.Get(command.Key)
+		if err == nil {
+			log.Infof("Get command successful found value: %s, for key: %s",
+				value, command.Key)
+		}
+
+		return err
 	case PUT_COMMAND == command.Type:
 		log.Infof("Put command given for key: %s, value: %s", command.Key,
 			command.Value)
@@ -71,7 +77,7 @@ func ProcessCommand(command Command, storage kvstore.Store) error {
 	case DEL_COMMAND == command.Type:
 		log.Infof("Del command given for key: %s, value: %s", command.Key,
 			command.Value)
-		return nil
+		return storage.Del(command.Key)
 	}
 
 	return errors.New(fmt.Sprintf("Invalid command given: %s", command))
