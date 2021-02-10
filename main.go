@@ -17,10 +17,11 @@ func main() {
 	log.SetOutput(file)
 
 	args := os.Args
-	if len(args) < 2 {
+	if len(args) < 3 {
 		log.Fatalln("Missing file path argument for input.")
 	}
 
-	file_path := args[1]
-	controller.ReadCsvCommands(file_path)
+	filePath := args[1]
+	outputPath := args[2]
+	controller.ReadCsvCommands(filePath, outputPath)
 }

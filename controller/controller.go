@@ -23,13 +23,19 @@ type Command struct {
 	Value string
 }
 
-func ReadCsvCommands(file_path string) {
-	csv_file, err := os.Open(file_path)
+func ReadCsvCommands(filePath string, outputPath string) {
+	csv_file, err := os.Open(filePath)
 
-	log.Infof("Opening csv file %s", file_path)
+	log.Infof("Opening csv file %s", filePath)
 
 	if err != nil {
 		log.Fatalln("FATAL: Could not open csv file.", err)
+	}
+
+	log.Infof("Creating output file.")
+	outErr := WriteOutputFirstLine(outputPath)
+	if outErr != nil {
+		log.Fatal("Could not create output file")
 	}
 
 	reader := csv.NewReader(csv_file)
@@ -51,33 +57,72 @@ func ReadCsvCommands(file_path string) {
 			continue
 		}
 		command := Command{record[0], record[1], record[3]}
-		cmd_err := ProcessCommand(command, kvStore)
+		cmd_err := ProcessCommand(command, kvStore, outputPath)
 		if cmd_err != nil {
 			log.Errorln(cmd_err)
 		}
 	}
 }
 
-func ProcessCommand(command Command, storage kvstore.Store) error {
+func WriteOutputFirstLine(outputPath string) error {
+	file, err := os.OpenFile(outputPath, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
+
+	if err != nil {
+		return err
+	}
+
+	_, write_err := file.WriteString("type,key1,outcome,values\n")
+	file.Close()
+	return write_err
+}
+
+func WriteOutput(command Command, outcome int, value string, outputPath string) error {
+	file, err := os.OpenFile(outputPath, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
+
+	if err != nil {
+		return err
+	}
+
+	_, write_err := file.WriteString(fmt.Sprintf("%s,%s,%d,%s\n", command.Type,
+		command.Key, outcome, value))
+	file.Close()
+	return write_err
+
+}
+
+func ProcessCommand(command Command, storage kvstore.Store, outputPath string) error {
 	switch {
 	case GET_COMMAND == command.Type:
 		log.Infof("Get command given for key: %s, value: %s", command.Key,
 			command.Value)
 		value, err := storage.Get(command.Key)
 		if err == nil {
+			WriteOutput(command, 1, value, outputPath)
 			log.Infof("Get command successful found value: %s, for key: %s",
 				value, command.Key)
+		} else {
+			WriteOutput(command, 0, "", outputPath)
 		}
 
 		return err
 	case PUT_COMMAND == command.Type:
 		log.Infof("Put command given for key: %s, value: %s", command.Key,
 			command.Value)
+
+		WriteOutput(command, 0, "", outputPath)
 		return storage.Put(command.Key, command.Value)
 	case DEL_COMMAND == command.Type:
 		log.Infof("Del command given for key: %s, value: %s", command.Key,
 			command.Value)
-		return storage.Del(command.Key)
+		err := storage.Del(command.Key)
+
+		if err == nil {
+			WriteOutput(command, 1, "", outputPath)
+		} else {
+			WriteOutput(command, 0, "", outputPath)
+		}
+
+		return err
 	}
 
 	return errors.New(fmt.Sprintf("Invalid command given: %s", command))
