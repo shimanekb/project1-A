@@ -23,17 +23,29 @@ type Store interface {
 
 type KvStore struct {
 	StorageFilePath string
+	Cache           Cache
 }
 
 func (k KvStore) Put(key string, value string) error {
+	k.Cache.Add(key, value)
 	return WritePut(k.StorageFilePath, key, value)
 }
 
-func (k KvStore) Get(key string) (string, error) {
-	return ReadGet(k.StorageFilePath, key)
+func (k KvStore) Get(key string) (value string, err error) {
+	val, ok := k.Cache.Get(key)
+
+	if ok {
+		value = val
+		err = nil
+	} else {
+		value, err = ReadGet(k.StorageFilePath, key)
+	}
+
+	return value, err
 }
 
 func (k KvStore) Del(key string) error {
+	k.Cache.Remove(key)
 	return WriteDel(k.StorageFilePath, key)
 }
 
@@ -57,7 +69,13 @@ func NewKvStore() *KvStore {
 	}
 	log.Info("Created storage file.")
 
-	return &KvStore{newpath}
+	cache, cErr := NewLruCache()
+
+	if cErr != nil {
+		log.Fatal("Could not create cache for kv store.")
+	}
+
+	return &KvStore{newpath, cache}
 }
 
 func WritePut(filePath string, key string, value string) error {
