@@ -10,3 +10,7 @@
    output files with real ones:
 
       ./project1-A [input.txt] [output.txt]
+
+## Design Updates
+Please refer to updated_design_document.pdf for details on
+current program design.
